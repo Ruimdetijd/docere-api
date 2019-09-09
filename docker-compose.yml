@@ -1,0 +1,12 @@
+version: "3.6"
+
+services:
+  docere_api:
+    command: ["node", "build"]
+    image: node:10-alpine
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - ../docere-config:/app/node_modules/docere-config
+    working_dir: /app
