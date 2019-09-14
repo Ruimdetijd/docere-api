@@ -2,13 +2,9 @@ import puppeteer from 'puppeteer'
 import express from 'express'
 import { Server } from 'http'
 import { getType } from './index-document'
-import * as path from 'path'
+import { getProjectPath, clock } from './utils'
 require = require('esm')(module) 
 const defaultDocereConfigData = require('docere-config').default
-
-function getProjectPath(slug: string = '') {
-	return path.resolve(`node_modules/docere-config/projects/${slug}`)
-}
 
 declare function extractFacsimiles(doc: XMLDocument): ExtractedFacsimile[]
 declare function extractMetadata(doc: XMLDocument): ExtractedMetadata
@@ -32,7 +28,12 @@ async function evaluateParseFile(documentId: string, xml: string, docereConfig: 
 	})
 
 	// Metadata
-	const metadata = extractMetadata(doc)
+	let metadata: any = {}
+	try {
+		metadata = extractMetadata(doc)
+	} catch (err) {
+		console.log(`Document ${documentId}: Metadata extraction error`)
+	}
 
 	return {
 		// id: fileName.slice(-4) === '.xml' ? fileName.slice(0, -4) : fileName,
@@ -56,7 +57,7 @@ export default class Puppenv {
 		app.disable('x-powered-by')
 		app.use(express.static(`node_modules/docere-config/projects`))
 		app.get('/', (_req, res) => res.send(`<html><head></head><body><canvas></canvas></body></html>`))
-		this.server = app.listen(3333)
+		this.server = app.listen(3333, () => console.log('Running express server for Puppeteer pages'))
 	}
 
 	async start() {
@@ -66,10 +67,15 @@ export default class Puppenv {
 				'--disable-setuid-sandbox',
 			]
 		})
+
+		console.log('Puppeteer launched')
 	}
 
 	private async getPage(projectId: string, docereConfigData: DocereConfigData) {
-		if (this.pages.has(projectId)) return this.pages.get(projectId)
+		if (this.pages.has(projectId)) {
+			console.log(`Return ${projectId} page (from cache)`)
+			return this.pages.get(projectId)
+		}
 
 		const page = await this.browser.newPage()
 		page.on('console', (msg: any) => {
@@ -85,11 +91,15 @@ export default class Puppenv {
 		await page.addScriptTag({ content: docereConfigData.extractTextData.toString() })
 
 		this.pages.set(projectId, page)	
+		console.log(`Return ${projectId} page`)
 		return page
 	}
 
 	private async getConfig(projectId: string) {
-		if (this.configs.has(projectId)) return this.configs.get(projectId)
+		if (this.configs.has(projectId)) {
+			console.log(`Return ${projectId} config (from cache)`)
+			return this.configs.get(projectId)
+		}
 
 		const configPath = `${getProjectPath(projectId)}/index.js`
 		const dcdImport: { default: DocereConfigData } = await import(configPath)
@@ -100,6 +110,8 @@ export default class Puppenv {
 		}
 
 		this.configs.set(projectId, docereConfigData)
+
+		console.log(`Return ${projectId} config`)
 		return docereConfigData
 	}
 
@@ -107,12 +119,16 @@ export default class Puppenv {
 		const docereConfigData = await this.getConfig(projectId)
 		const page = await this.getPage(projectId, docereConfigData)
 
-		return await page.evaluate(
+		var start = clock()
+		const result = await page.evaluate(
 			evaluateParseFile,
 			documentId,
 			xml,
 			docereConfigData.config as any,
 		)
+		var duration = clock(start as any)
+		console.log("Took "+duration+"ms")
+		return result
 	}
 
 	async getMapping(xmlContents: string[], projectId: string) {

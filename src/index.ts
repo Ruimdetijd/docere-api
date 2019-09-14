@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import Puppenv from './puppenv'
 import './puppenv.utils'
+import { getProjectPath } from './utils'
 
 const app = express()
 const port = 3000
@@ -22,19 +23,28 @@ async function main() {
 	const puppenv = new Puppenv()
 	await puppenv.start()
 
-	app.get('/mapping/gekaaptebrieven', async (req, res) => {
-		res.setHeader('Content-Type', 'application/json')
-		res.send(`{"mappings":{"doc":{"properties":{"id":{"type":"keyword"},"text":{"type":"text"},"facsimiles":{"type":"keyword"},"corr":{"type":"keyword"},"texttypes":{"type":"keyword"},"languages":{"type":"keyword"},"has_date":{"type":"boolean"},"sender_or_recipient":{"type":"keyword"},"person":{"type":"keyword"},"org":{"type":"keyword"},"loc":{"type":"keyword"},"misc":{"type":"keyword"},"date":{"type":"date"},"recipient":{"type":"keyword"},"recipientloc":{"type":"keyword"},"recipientgender":{"type":"keyword"},"recipientprof":{"type":"keyword"},"sender":{"type":"keyword"},"senderprof":{"type":"keyword"},"senderloc":{"type":"keyword"},"sendergender":{"type":"keyword"},"recipientship":{"type":"keyword"},"sendership":{"type":"keyword"}}}}}`)
-	})
+	// app.get('/mapping/gekaaptebrieven', async (req, res) => {
+	// 	res.setHeader('Content-Type', 'application/json')
+	// 	res.send(`{"mappings":{"doc":{"properties":{"id":{"type":"keyword"},"text":{"type":"text"},"facsimiles":{"type":"keyword"},"corr":{"type":"keyword"},"texttypes":{"type":"keyword"},"languages":{"type":"keyword"},"has_date":{"type":"boolean"},"sender_or_recipient":{"type":"keyword"},"person":{"type":"keyword"},"org":{"type":"keyword"},"loc":{"type":"keyword"},"misc":{"type":"keyword"},"date":{"type":"date"},"recipient":{"type":"keyword"},"recipientloc":{"type":"keyword"},"recipientgender":{"type":"keyword"},"recipientprof":{"type":"keyword"},"sender":{"type":"keyword"},"senderprof":{"type":"keyword"},"senderloc":{"type":"keyword"},"sendergender":{"type":"keyword"},"recipientship":{"type":"keyword"},"sendership":{"type":"keyword"}}}}}`)
+	// })
 
-	app.get('/mapping/kranten1700', async (req, res) => {
-		res.setHeader('Content-Type', 'application/json')
-		res.send(`{"mappings":{"doc":{"properties":{"id":{"type":"keyword"},"text":{"type":"text"},"facsimiles":{"type":"keyword"},"article":{"type":"keyword"},"article_id":{"type":"keyword"},"article_title":{"type":"keyword"},"colophon":{"type":"keyword"},"colophon_text":{"type":"keyword"},"date":{"type":"date"},"err_text_type":{"type":"keyword"},"docId":{"type":"keyword"},"language":{"type":"keyword"},"paper_id":{"type":"keyword"},"paper_title":{"type":"keyword"},"pos":{"type":"keyword"},"org":{"type":"keyword"},"per":{"type":"keyword"},"loc":{"type":"keyword"},"misc":{"type":"keyword"}}}}}`)
-	})
+	// app.get('/mapping/kranten1700', async (req, res) => {
+	// 	res.setHeader('Content-Type', 'application/json')
+	// 	res.send(`{"mappings":{"doc":{"properties":{"id":{"type":"keyword"},"text":{"type":"text"},"facsimiles":{"type":"keyword"},"article":{"type":"keyword"},"article_id":{"type":"keyword"},"article_title":{"type":"keyword"},"colophon":{"type":"keyword"},"colophon_text":{"type":"keyword"},"date":{"type":"date"},"err_text_type":{"type":"keyword"},"docId":{"type":"keyword"},"language":{"type":"keyword"},"paper_id":{"type":"keyword"},"paper_title":{"type":"keyword"},"pos":{"type":"keyword"},"org":{"type":"keyword"},"per":{"type":"keyword"},"loc":{"type":"keyword"},"misc":{"type":"keyword"}}}}}`)
+	// })
 
 	app.get('/mapping/:projectId', async (req, res) => {
-		const baseDir = path.resolve(process.cwd(), `../docere-config/projects/${req.params.projectId}/xml`)
-		const files = fs.readdirSync(baseDir)
+		const baseDir = getProjectPath(req.params.projectId) + '/xml'
+		let files: string[]
+
+		try {
+			files = fs.readdirSync(baseDir)
+		} catch (err) {
+			console.log(err)
+			res.status(404).end()	
+			return
+		}
+
 		const files2 = [
 			files[0],
 			files[Math.floor(files.length * .125)],
