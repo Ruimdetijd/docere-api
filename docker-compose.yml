@@ -2,8 +2,9 @@ version: "3.6"
 
 services:
   docere_api:
-    command: ["node", "build"]
-    image: node:10-alpine
+    build:
+      context: .
+    command: ["npx", "nodemon", "build"]
     ports:
       - "3000:3000"
     volumes:
