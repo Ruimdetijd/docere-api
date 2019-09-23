@@ -3,9 +3,11 @@
     "baseUrl": ".",
     "declaration": true,
     "esModuleInterop": true,
+    "importHelpers": true,
     "module": "commonjs",
     "noImplicitAny": true,
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "outDir": "./build",
     "removeComments": true,
     "target": "es2017"
@@ -15,6 +17,7 @@
   ],
   "include": [
     "src/index.ts",
+    "src/indexer.ts",
     "src/types.d.ts"
   ]
 }

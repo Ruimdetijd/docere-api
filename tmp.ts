@@ -2,10 +2,6 @@ function getProjectPath(slug: string = '') {
 	return path.resolve(`node_modules/docere-config/projects/${slug}`)
 }
 
-function logError(msg: string) {
-	console.log("\x1b[31m", msg, "\x1b[0m")
-}
-
 async function handleProject(projectSlug: string) {
 	const configPath = `${getProjectPath(projectSlug)}/index.js`
 
