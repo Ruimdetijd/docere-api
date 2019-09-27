@@ -70,7 +70,7 @@ async function main() {
 		try {
 			documentFields = await puppenv.getDocumentFields(contents, req.params.projectId, req.params.documentId)
 		} catch (err) {
-			return res.status(404).json({ error: err.message })
+			return res.status(400).json({ error: err.message })
 		}
 
 		res.json(documentFields)
@@ -83,10 +83,16 @@ async function main() {
 		if (req.body == null || !req.body.length) {
 			return res.status(400).json({ error: 'The payload body should be the contents of an XML file.' })
 		}
-		const documentFields = await puppenv.getDocumentFields(req.body, req.params.projectId, req.params.documentId)
-		if (documentFields == null) {
-			return res.status(404).end()
+
+		let documentFields: ElasticSearchDocument
+		try {
+			documentFields = await puppenv.getDocumentFields(req.body, req.params.projectId, req.params.documentId)
+		} catch (err) {
+			return res.status(400).json({ error: err.message })
 		}
+
+		if (documentFields == null) return res.status(404).end()
+
 		res.json(documentFields)
 	})
 

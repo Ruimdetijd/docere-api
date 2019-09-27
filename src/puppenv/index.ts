@@ -39,7 +39,7 @@ export default class Puppenv {
 		this.server.close()
 	}
 
-	async getDocumentFields(xml: string, projectId: string, documentId?: string) {
+	async getDocumentFields(xml: string, projectId: string, documentId?: string): Promise<ElasticSearchDocument> {
 		const docereConfigData = await this.getConfig(projectId)
 		if (docereConfigData == null) throw new Error(`No config found for project '${projectId}'`)
 
@@ -51,7 +51,10 @@ export default class Puppenv {
 			documentId,
 			docereConfigData.config as any,
 		)
-		return result
+
+		if (result.hasOwnProperty('__error')) throw new Error(result.__error)
+
+		return result as ElasticSearchDocument
 	}
 
 	async getMapping(projectId: string, fileNames: string[]): Promise<Mapping> {
@@ -92,13 +95,6 @@ export default class Puppenv {
 		return {
 			mappings: { properties }
 		}
-		// return {
-		// 	mappings: {
-		// 		doc: {
-		// 			properties
-		// 		}
-		// 	}
-		// }
 	}
 
 	async getConfig(projectId: string) {

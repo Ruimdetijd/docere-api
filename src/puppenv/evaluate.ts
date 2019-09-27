@@ -5,7 +5,7 @@ declare global {
 	function prepareDocument(doc: XMLDocument, config: DocereConfig, id?: string): XMLDocument
 }
 
-export async function prepareAndExtract(xml: string, documentId: string, docereConfig: DocereConfig): Promise<ElasticSearchDocument> {
+export async function prepareAndExtract(xml: string, documentId: string, docereConfig: DocereConfig): Promise<ElasticSearchDocument | { __error: string }> {
 	const domParser = new DOMParser()
 	let xmlRoot: XMLDocument
 
@@ -13,6 +13,11 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 		xmlRoot = domParser.parseFromString(xml, "application/xml")
 	} catch (err) {
 		console.log(`Document ${documentId}: XML parser error`)
+	}
+
+	const parsererror = xmlRoot.querySelector('parsererror')
+	if (parsererror != null) {
+		return { __error: parsererror.textContent }
 	}
 
 	// TODO use ID for when splitting is needed
