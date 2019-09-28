@@ -15,9 +15,14 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 		console.log(`Document ${documentId}: XML parser error`)
 	}
 
-	const parsererror = xmlRoot.querySelector('parsererror')
-	if (parsererror != null) {
-		return { __error: parsererror.textContent }
+	if (xmlRoot.querySelector('parsererror')) {
+		// Check the namespace to be certain it is a parser error and not an element named "parsererror"
+		// See: https://stackoverflow.com/questions/11563554/how-do-i-detect-xml-parsing-errors-when-using-javascripts-domparser-in-a-cross
+		const parsererrorNS = domParser.parseFromString('INVALID', 'text/xml').getElementsByTagName("parsererror")[0].namespaceURI
+		const parsererrors = xmlRoot.getElementsByTagNameNS(parsererrorNS, 'parsererror')
+		if (parsererrors.length) {
+			return { __error: parsererrors[0].textContent }
+		}
 	}
 
 	// TODO use ID for when splitting is needed
