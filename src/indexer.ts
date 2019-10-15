@@ -44,14 +44,13 @@ async function handleProject(projectId: string) {
 		const xml = fs.readFileSync(path.resolve(xmlDirPath, file), 'utf8')
 		const esDocument = await puppenv.getDocumentFields(xml, projectId, path.basename(file, '.xml'))
 		if (esDocument.hasOwnProperty('__error')) return esDocument.__error
-		const { id, ...body } = esDocument as ElasticSearchDocument
 		
 		try {
 			await esClient.index({
 				// id,
 				index: projectId,
 				// type: 'doc',
-				body,
+				body: esDocument,
 			})
 			console.log(`Indexed ${file} from project '${projectId}'`)
 		} catch (err) {
