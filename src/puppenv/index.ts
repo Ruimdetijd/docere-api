@@ -1,24 +1,19 @@
-import * as fs from 'fs'
-import * as path from 'path'
 import puppeteer from 'puppeteer'
 import express from 'express'
 import { Server } from 'http'
-import { getProjectPath, getType } from '../utils'
+import { getType, getConfigDataPath, getProjectsDir, readFileContents, xmlBasename } from '../utils'
 import { prepareAndExtract } from './evaluate'
-
-require = require('esm')(module) 
-const defaultDocereConfigData: DocereConfigData = require('docere-config').default
 
 export default class Puppenv {
 	private browser: puppeteer.Browser
 	private server: Server
 	private pages: Map<string, puppeteer.Page> = new Map()
-	private configs: Map<string, DocereConfigData> = new Map()
+	private configDatas: Map<string, DocereConfigData> = new Map()
 
 	constructor() {
 		const app = express()
 		app.disable('x-powered-by')
-		app.use(express.static(`node_modules/docere-config/projects`))
+		app.use(express.static(getProjectsDir().replace(/^\/app/, '')))
 		app.get('/', (_req, res) => res.send(`<html><head></head><body><canvas></canvas></body></html>`))
 		this.server = app.listen(3333, () => console.log('Running express server for Puppeteer pages'))
 	}
@@ -40,7 +35,7 @@ export default class Puppenv {
 	}
 
 	async getDocumentFields(xml: string, projectId: string, documentId?: string): Promise<ElasticSearchDocument> {
-		const docereConfigData = await this.getConfig(projectId)
+		const docereConfigData = await this.getConfigData(projectId)
 		if (docereConfigData == null) throw new Error(`No config found for project '${projectId}'`)
 
 		const page = await this.getPage(projectId, docereConfigData)
@@ -59,7 +54,7 @@ export default class Puppenv {
 
 	async getMapping(projectId: string, fileNames: string[]): Promise<Mapping> {
 		const properties: MappingProperties = {}
-		const docereConfigData = await this.getConfig(projectId)
+		const docereConfigData = await this.getConfigData(projectId)
 		if (docereConfigData == null) throw new Error(`No config found for project '${projectId}'`)
 
 		const selectedFileNames = [
@@ -74,13 +69,11 @@ export default class Puppenv {
 			fileNames[fileNames.length - 1]
 		]	
 
-		const getXmlFilePath = (file: string) => path.resolve(getProjectPath(projectId), 'xml', file)
-		const readFileContents = async (file: string) => await fs.readFileSync(getXmlFilePath(file), 'utf8')
-		const xmlContents = await Promise.all(selectedFileNames.map(readFileContents))
+		const xmlContents = await Promise.all(selectedFileNames.map(fn => readFileContents(projectId, fn)))
 
 		const fieldKeys = new Set<string>()
-		for (const xml of xmlContents) {
-			const fields = await this.getDocumentFields(xml, projectId)
+		for (const [i, xml] of xmlContents.entries()) {
+			const fields = await this.getDocumentFields(xml, projectId, xmlBasename(selectedFileNames[i]))
 			Object.keys(fields).forEach(fieldKey => fieldKeys.add(fieldKey))
 		}
 
@@ -97,35 +90,27 @@ export default class Puppenv {
 		}
 	}
 
-	async getConfig(projectId: string) {
-		if (this.configs.has(projectId)) {
-			return this.configs.get(projectId)
+	async getConfigData(projectId: string) {
+		if (this.configDatas.has(projectId)) {
+			return this.configDatas.get(projectId)
 		}
 
-		const configPath = `${getProjectPath(projectId)}/index.js`
+		const configDataPath = getConfigDataPath(projectId)
+
 		let dcdImport: { default: DocereConfigData }
 		try {
-			dcdImport = await import(configPath)
+			dcdImport = require(configDataPath)
 		} catch (err) {
-			throw new Error('[getConfig] Config file not found')
+			throw new Error(`[getConfigData] Config file not found at '${configDataPath}'`)
 		}
 
-
-		const docereConfigData: DocereConfigData = {
-			...defaultDocereConfigData,
-			...dcdImport.default,
-			config: {...defaultDocereConfigData.config, ...dcdImport.default.config }
-		}
-
-		this.configs.set(projectId, docereConfigData)
+		this.configDatas.set(projectId, dcdImport.default)
 		console.log(`Return ${projectId} config`)
-		return docereConfigData
+		return dcdImport.default
 	}
 
 	private async getPage(projectId: string, docereConfigData: DocereConfigData) {
-		if (this.pages.has(projectId)) {
-			return this.pages.get(projectId)
-		}
+		if (this.pages.has(projectId)) return this.pages.get(projectId)
 
 		const page = await this.browser.newPage()
 		page.on('console', (msg: any) => {
@@ -134,10 +119,10 @@ export default class Puppenv {
 		})
 		await page.goto('http://localhost:3333')
 
-		await page.addScriptTag({ content: docereConfigData.prepareDocument.toString() })
+		await page.addScriptTag({ content: docereConfigData.prepareDocument.toString()	 })
 		await page.addScriptTag({ content: docereConfigData.extractFacsimiles.toString() })
-		await page.addScriptTag({ content: docereConfigData.extractMetadata.toString() })
-		await page.addScriptTag({ content: docereConfigData.extractTextData.toString() })
+		await page.addScriptTag({ content: docereConfigData.extractMetadata.toString()	 })
+		await page.addScriptTag({ content: docereConfigData.extractTextData.toString()	 })
 
 		this.pages.set(projectId, page)	
 		console.log(`Return ${projectId} page`)

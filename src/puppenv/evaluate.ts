@@ -29,7 +29,7 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	// Prepare document
 	let doc: XMLDocument
 	try {
-		doc = await prepareDocument(xmlRoot, docereConfig)
+		doc = await prepareDocument(xmlRoot, docereConfig, documentId)
 	} catch (err) {
 		console.log(`Document ${documentId}: Preparation error`)
 	}

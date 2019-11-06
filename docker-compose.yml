@@ -10,4 +10,5 @@ services:
     volumes:
       - ./:/app
       - ../docere-config:/app/node_modules/docere-config
+      - ../docere:/app/node_modules/docere
     working_dir: /app

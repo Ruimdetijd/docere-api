@@ -2,9 +2,8 @@
 
 import express from 'express'
 import * as fs from 'fs'
-import * as path from 'path'
 import Puppenv from './puppenv'
-import { getProjectPath, listProjects } from './utils'
+import { listProjects, getXMLDir, getXMLPath } from './utils'
 
 const app = express()
 const port = 3000
@@ -20,7 +19,6 @@ app.use((req, _res, next) => {
 	}
 })
 
-
 async function main() {
 	const puppenv = new Puppenv()
 	await puppenv.start()
@@ -30,17 +28,22 @@ async function main() {
 	})
 
 	app.get('/projects/:projectId/config', async (req, res) => {
-		const config = await puppenv.getConfig(req.params.projectId)
-
-		if (config == null) {
+		let configData
+		try {
+			configData = await puppenv.getConfigData(req.params.projectId)
+		} catch (error) {
+			console.log(error)	
+		}
+		
+		if (configData == null) {
 			return res.status(404).end()
 		}
 
-		res.json(config)
+		res.json(configData)
 	})
 
 	app.get('/projects/:projectId/mapping', async (req, res) => {
-		const xmlDirPath = path.resolve(getProjectPath(req.params.projectId), 'xml')
+		const xmlDirPath = getXMLDir(req.params.projectId)
 		let files: string[]
 
 		try {
@@ -55,12 +58,13 @@ async function main() {
 		} catch (err) {
 			return res.status(404).json({ error: err.message })	
 		}
+
 		res.json(mapping)
 	})
 
 	app.get('/projects/:projectId/documents/:documentId', async (req, res) => {
 		let contents
-		const filePath = path.resolve(getProjectPath(req.params.projectId), 'xml', `${req.params.documentId}.xml`)
+		const filePath = getXMLPath(req.params.projectId, req.params.documentId)
 
 		try {
 			contents = await fs.readFileSync(filePath, 'utf8')
@@ -97,7 +101,6 @@ async function main() {
 
 		res.json(documentFields)
 	})
-
 
 	app.get('/api/dts', (_req, res) => {
 		res.json({
@@ -182,7 +185,7 @@ async function main() {
 		})
 	})
 
-	app.listen(port, () => console.log(`Docere ElasticSearch index data service running on port ${port}`))
+	app.listen(port, () => console.log(`Docere API running on port ${port}`))
 }
 
 main()

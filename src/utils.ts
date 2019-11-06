@@ -1,10 +1,34 @@
 import * as path from 'path'
 import * as fs from 'fs'
 
-export function getProjectPath(projectId: string = '') {
-	return path.resolve(process.cwd(), `node_modules/docere-config/projects/${projectId}`)
+export function getProjectsDir() {
+	return path.resolve(process.cwd(), `node_modules/docere-projects`)
 }
 
+export function getProjectDir(projectId: string) {
+	return path.resolve(getProjectsDir(), projectId)
+}
+
+export function getXMLDir(projectId: string) {
+	return path.resolve(getProjectDir(projectId), 'xml')
+}
+
+export function getXMLPath(projectId: string, documentId: string) {
+	return path.resolve(getXMLDir(projectId), `${documentId}.xml`)
+}
+
+export function getConfigDataPath(projectId: string) {
+	return path.resolve(getProjectDir(projectId), 'build', 'index.js')
+}
+
+export function xmlBasename(filename: string) {
+	return path.basename(filename, '.xml')
+}
+
+export function readFileContents(projectId: string, file: string) {
+	const filePath = getXMLPath(projectId, xmlBasename(file))
+	return fs.readFileSync(filePath, 'utf8')
+}
 
 export function getType(key: string, config: DocereConfig): EsDataType {
 	let type = EsDataType.keyword
@@ -20,7 +44,7 @@ export function getType(key: string, config: DocereConfig): EsDataType {
 	return type
 }
 
-export const listProjects = () => fs.readdirSync(getProjectPath())
+export const listProjects = () => fs.readdirSync(getProjectsDir())
 
 /** TODO USE?
 function logError(msg: string) {

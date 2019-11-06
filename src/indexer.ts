@@ -2,17 +2,14 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as es from '@elastic/elasticsearch'
 import Puppenv from './puppenv'
-import { getProjectPath } from './utils'
+import { listProjects, getXMLDir } from './utils'
 
 const puppenv = new Puppenv()
-const esClient = new es.Client({
-	node: 'http://localhost:9200',
-})
-
+const esClient = new es.Client({ node: 'http://localhost:9200' })
 
 async function handleProject(projectId: string) {
-	const xmlDirPath = path.resolve(getProjectPath(projectId), 'xml')
-	const files = fs.readdirSync(xmlDirPath)
+	const projectDir = getXMLDir(projectId)
+	const files = fs.readdirSync(projectDir)
 
 	// Get the ElasticSearch mapping for the project
 	let mapping: Mapping
@@ -41,7 +38,7 @@ async function handleProject(projectId: string) {
 
 	// Insert every XML file one by one
 	for (const file of files) {
-		const xml = fs.readFileSync(path.resolve(xmlDirPath, file), 'utf8')
+		const xml = fs.readFileSync(path.resolve(projectDir, file), 'utf8')
 		const esDocument = await puppenv.getDocumentFields(xml, projectId, path.basename(file, '.xml'))
 		if (esDocument.hasOwnProperty('__error')) return esDocument.__error
 		
@@ -63,7 +60,7 @@ async function main() {
 	await puppenv.start()
 	
 	let projects = process.argv.slice(2, 3)
-	if (!projects.length) projects = fs.readdirSync(getProjectPath())
+	if (!projects.length) projects = listProjects()
 	for (const projectSlug of projects) {
 		await handleProject(projectSlug)
 	}
