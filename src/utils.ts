@@ -1,73 +1,90 @@
 import * as path from 'path'
 import * as fs from 'fs'
 
-export function getProjectsDir() {
-	return path.resolve(process.cwd(), `node_modules/docere-projects`)
+export function getProjectsSourceDir() {
+	return path.resolve(process.cwd(), `node_modules/docere-projects/src`)
 }
 
-export function getProjectDir(projectId: string) {
-	return path.resolve(getProjectsDir(), projectId)
+function getProjectBuildDir(projectId: string) {
+	return path.resolve(process.cwd(), `node_modules/docere-projects/build`, projectId)
 }
 
-export function getXMLDir(projectId: string) {
-	return path.resolve(getProjectDir(projectId), 'xml')
+export function getProjectSourcedDir(projectId: string) {
+	return path.resolve(getProjectsSourceDir(), projectId)
+}
+
+export function getXmlDir(projectId: string) {
+	return path.resolve(getProjectSourcedDir(projectId), 'xml')
 }
 
 export function getXMLPath(projectId: string, documentId: string) {
-	return path.resolve(getXMLDir(projectId), `${documentId}.xml`)
+	return path.resolve(getXmlDir(projectId), `${documentId}.xml`)
 }
 
 export function getConfigDataPath(projectId: string) {
-	return path.resolve(getProjectDir(projectId), 'build', 'index.js')
+	return path.resolve(getProjectBuildDir(projectId), 'index.js')
 }
 
-export function xmlBasename(filename: string) {
-	return path.basename(filename, '.xml')
+export function getEntryIdFromFilePath(xmlFilePath: string, projectId: string) {
+	const dir = path.dirname(xmlFilePath).replace(getXmlDir(projectId), '')
+	const base = path.basename(xmlFilePath, '.xml')
+
+	return `${dir}/${base}`.replace(/^\//, '')
 }
 
-export function readFileContents(projectId: string, file: string) {
-	const filePath = getXMLPath(projectId, xmlBasename(file))
+export function readFileContents(filePath: string) {
 	return fs.readFileSync(filePath, 'utf8')
 }
 
 export function getType(key: string, config: DocereConfig): EsDataType {
-	let type = EsDataType.keyword
+	let type = EsDataType.Keyword
 
 	const mdConfig = config.metadata.find(md => md.id === key)
 	if (mdConfig != null && mdConfig.datatype != null) type = mdConfig.datatype
 
-	const tdConfig = config.textdata.find(md => md.id === key)
+	const tdConfig = config.textData.find(md => md.id === key)
 	if (tdConfig != null && tdConfig.datatype != null) type = tdConfig.datatype
 
-	if (key === 'text') type = EsDataType.text
+	if (key === 'text') type = EsDataType.Text
 
 	return type
 }
 
-export const listProjects = () => fs.readdirSync(getProjectsDir())
-
-/** TODO USE?
-function logError(msg: string) {
-	console.log("\x1b[31m", msg, "\x1b[0m")
+export function listProjects() {
+	return fs.readdirSync(getProjectsSourceDir(), { withFileTypes: true })
+		.filter(dirent => dirent.isDirectory())
+		.map(dirent => dirent.name)
 }
-*/
 
+/**
+ * Check if dirent is XML file
+ */
+function isXmlFile(dirent: fs.Dirent) { return dirent.isFile() && path.extname(dirent.name) === '.xml' }
 
-// export function clock(start?: [number, number]) {
-//     if ( !start ) return process.hrtime();
-//     var end = process.hrtime(start);
-//     return Math.round((end[0]*1000) + (end[1]/1000000));
-// }
-// var start = clock()
-// var duration = clock(start as any)
-// console.log("Took "+duration+"ms")
+/**
+ * An entry can exist of multiple XML files, but this
+ * recursive function returns only the "main" XML files.
+ */
+function getMainXmlFilePathsFromDir(dir: string) {
+	const files: string[] = []
+	const dirents = fs.readdirSync(dir, { withFileTypes: true })
+	const xmlFiles = dirents.filter(isXmlFile)
 
-// export class Project {
-// 	constructor(public id: string) {
+	if (xmlFiles.length) {
+		xmlFiles.forEach(f => files.push(`${dir}/${f.name}`))
+	} else {
+		dirents
+			.filter(x => x.isDirectory() || x.isSymbolicLink())
+			.forEach(x => {
+				getMainXmlFilePathsFromDir(`${dir}/${x.name}`)
+					.forEach(f => files.push(f))
+			})
+	}
 
-// 	}
+	return files
+}
 
-// 	getPath() {
-// 		return path.resolve(process.cwd(), `node_modules/docere-config/projects/${this.id}`)
-// 	}
-// }
+export async function getXmlFiles(projectId: string) {
+	const baseDir = getXmlDir(projectId)
+	return getMainXmlFilePathsFromDir(baseDir)
+}

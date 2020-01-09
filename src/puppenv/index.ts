@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer'
 import express from 'express'
 import { Server } from 'http'
-import { getType, getConfigDataPath, getProjectsDir, readFileContents, xmlBasename } from '../utils'
+import { getType, getConfigDataPath, getProjectsSourceDir, readFileContents, getEntryIdFromFilePath } from '../utils'
 import { prepareAndExtract } from './evaluate'
 
 export default class Puppenv {
@@ -13,7 +13,7 @@ export default class Puppenv {
 	constructor() {
 		const app = express()
 		app.disable('x-powered-by')
-		app.use(express.static(getProjectsDir().replace(/^\/app/, '')))
+		app.use(express.static(getProjectsSourceDir().replace(/^\/app/, '')))
 		app.get('/', (_req, res) => res.send(`<html><head></head><body><canvas></canvas></body></html>`))
 		this.server = app.listen(3333, () => console.log('Running express server for Puppeteer pages'))
 	}
@@ -44,7 +44,7 @@ export default class Puppenv {
 			prepareAndExtract,
 			xml,
 			documentId,
-			docereConfigData.config as any,
+			docereConfigData.config as any
 		)
 
 		if (result.hasOwnProperty('__error')) throw new Error(result.__error)
@@ -52,33 +52,34 @@ export default class Puppenv {
 		return result as ElasticSearchDocument
 	}
 
-	async getMapping(projectId: string, fileNames: string[]): Promise<Mapping> {
+	async getMapping(projectId: string, filePaths: string[]): Promise<Mapping> {
 		const properties: MappingProperties = {}
 		const docereConfigData = await this.getConfigData(projectId)
 		if (docereConfigData == null) throw new Error(`No config found for project '${projectId}'`)
 
 		const selectedFileNames = [
-			fileNames[0],
-			fileNames[Math.floor(fileNames.length * .125)],
-			fileNames[Math.floor(fileNames.length * .25)],
-			fileNames[Math.floor(fileNames.length * .375)],
-			fileNames[Math.floor(fileNames.length * .5)],
-			fileNames[Math.floor(fileNames.length * .625)],
-			fileNames[Math.floor(fileNames.length * .75)],
-			fileNames[Math.floor(fileNames.length * .875)],
-			fileNames[fileNames.length - 1]
+			filePaths[0],
+			filePaths[Math.floor(filePaths.length * .125)],
+			filePaths[Math.floor(filePaths.length * .25)],
+			filePaths[Math.floor(filePaths.length * .375)],
+			filePaths[Math.floor(filePaths.length * .5)],
+			filePaths[Math.floor(filePaths.length * .625)],
+			filePaths[Math.floor(filePaths.length * .75)],
+			filePaths[Math.floor(filePaths.length * .875)],
+			filePaths[filePaths.length - 1]
 		]	
 
-		const xmlContents = await Promise.all(selectedFileNames.map(fn => readFileContents(projectId, fn)))
+		const xmlContents = await Promise.all(selectedFileNames.map(fn => readFileContents(fn)))
 
 		const fieldKeys = new Set<string>()
 		for (const [i, xml] of xmlContents.entries()) {
-			const fields = await this.getDocumentFields(xml, projectId, xmlBasename(selectedFileNames[i]))
+			const entryId = getEntryIdFromFilePath(selectedFileNames[i], projectId)
+			const fields = await this.getDocumentFields(xml, projectId, entryId)
 			Object.keys(fields).forEach(fieldKey => fieldKeys.add(fieldKey))
 		}
 
 		if (docereConfigData.config.hasOwnProperty('metadata')) docereConfigData.config.metadata.forEach(md => fieldKeys.add(md.id))
-		if (docereConfigData.config.hasOwnProperty('metadata')) docereConfigData.config.textdata.forEach(td => fieldKeys.add(td.id))
+		if (docereConfigData.config.hasOwnProperty('metadata')) docereConfigData.config.textData.forEach(td => fieldKeys.add(td.id))
 
 		fieldKeys
 			.forEach(key => {

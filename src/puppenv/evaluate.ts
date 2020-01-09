@@ -1,8 +1,8 @@
 declare global {
-	function extractFacsimiles(doc: XMLDocument): ExtractedFacsimile[]
-	function extractMetadata(doc: XMLDocument): ExtractedMetadata
-	function extractTextData(doc: XMLDocument, config: DocereConfig): ExtractedTextData
-	function prepareDocument(doc: XMLDocument, config: DocereConfig, id?: string): XMLDocument
+	const extractFacsimiles: DocereConfigDataRaw['extractFacsimiles']
+	const extractMetadata: DocereConfigDataRaw['extractMetadata']
+	const extractTextData: DocereConfigDataRaw['extractTextData']
+	const prepareDocument: DocereConfigDataRaw['prepareDocument']
 }
 
 export async function prepareAndExtract(xml: string, documentId: string, docereConfig: DocereConfig): Promise<ElasticSearchDocument | { __error: string }> {
@@ -27,6 +27,7 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 
 	// TODO use ID for when splitting is needed
 	// Prepare document
+	// console.log(prepareDocument.toString())
 	let doc: XMLDocument
 	try {
 		doc = await prepareDocument(xmlRoot, docereConfig, documentId)
@@ -36,13 +37,12 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 
 	// Text data
 	const textData: Record<string, string[]> = {}
-	let extractedTextData: ExtractedTextData = {}
+	let extractedTextData: ExtractedTextData = new Map()
 	try {
 		extractedTextData = extractTextData(doc, docereConfig)
-		Object.keys(extractedTextData).forEach(key => {
-			const data = extractedTextData[key]
-			textData[key] = data.map(d => d.value)
-		})
+		for (const [key, data] of extractedTextData.entries()) {
+			textData[key] = Array.from(data.values()).map(d => d.value)
+		}
 	} catch (err) {
 		console.log(`Document ${documentId}: Text data extraction error`)
 	}
@@ -50,7 +50,7 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	// Metadata
 	let metadata: ExtractedMetadata = {}
 	try {
-		metadata = extractMetadata(doc)
+		metadata = extractMetadata(doc, docereConfig, documentId)
 	} catch (err) {
 		console.log(`Document ${documentId}: Metadata extraction error`)
 	}

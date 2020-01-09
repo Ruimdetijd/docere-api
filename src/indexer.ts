@@ -1,20 +1,17 @@
-import * as fs from 'fs'
-import * as path from 'path'
 import * as es from '@elastic/elasticsearch'
 import Puppenv from './puppenv'
-import { listProjects, getXMLDir } from './utils'
+import { listProjects, getXmlFiles, readFileContents, getEntryIdFromFilePath } from './utils'
 
 const puppenv = new Puppenv()
 const esClient = new es.Client({ node: 'http://localhost:9200' })
 
 async function handleProject(projectId: string) {
-	const projectDir = getXMLDir(projectId)
-	const files = fs.readdirSync(projectDir)
+	const filePaths = await getXmlFiles(projectId)
 
 	// Get the ElasticSearch mapping for the project
 	let mapping: Mapping
 	try {
-		mapping = await puppenv.getMapping(projectId, files)
+		mapping = await puppenv.getMapping(projectId, filePaths)
 	} catch (err) {
 		return console.log(err.message)
 	}
@@ -37,19 +34,18 @@ async function handleProject(projectId: string) {
 	}
 
 	// Insert every XML file one by one
-	for (const file of files) {
-		const xml = fs.readFileSync(path.resolve(projectDir, file), 'utf8')
-		const esDocument = await puppenv.getDocumentFields(xml, projectId, path.basename(file, '.xml'))
+	for (const filePath of filePaths) {
+		const xml = readFileContents(filePath)
+		const entryId = getEntryIdFromFilePath(filePath, projectId)
+		const esDocument = await puppenv.getDocumentFields(xml, projectId, entryId)
 		if (esDocument.hasOwnProperty('__error')) return esDocument.__error
 		
 		try {
 			await esClient.index({
-				// id,
 				index: projectId,
-				// type: 'doc',
 				body: esDocument,
 			})
-			console.log(`Indexed ${file} from project '${projectId}'`)
+			console.log(`Indexed '${entryId}' from project '${projectId}'`)
 		} catch (err) {
 			console.log(err)	
 		}
@@ -59,8 +55,10 @@ async function handleProject(projectId: string) {
 async function main() {
 	await puppenv.start()
 	
+	// TODO error if projec does not exist
 	let projects = process.argv.slice(2, 3)
 	if (!projects.length) projects = listProjects()
+
 	for (const projectSlug of projects) {
 		await handleProject(projectSlug)
 	}

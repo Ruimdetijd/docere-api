@@ -3,7 +3,7 @@
 import express from 'express'
 import * as fs from 'fs'
 import Puppenv from './puppenv'
-import { listProjects, getXMLDir, getXMLPath } from './utils'
+import { listProjects, getXmlDir, getXMLPath } from './utils'
 
 const app = express()
 const port = 3000
@@ -43,7 +43,7 @@ async function main() {
 	})
 
 	app.get('/projects/:projectId/mapping', async (req, res) => {
-		const xmlDirPath = getXMLDir(req.params.projectId)
+		const xmlDirPath = getXmlDir(req.params.projectId)
 		let files: string[]
 
 		try {
