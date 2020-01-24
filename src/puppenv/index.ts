@@ -4,6 +4,8 @@ import { Server } from 'http'
 import { getType, getConfigDataPath, getProjectsSourceDir, readFileContents, getEntryIdFromFilePath } from '../utils'
 import { prepareAndExtract } from './evaluate'
 
+const port = 3334
+
 export default class Puppenv {
 	private browser: puppeteer.Browser
 	private server: Server
@@ -15,7 +17,7 @@ export default class Puppenv {
 		app.disable('x-powered-by')
 		app.use(express.static(getProjectsSourceDir().replace(/^\/app/, '')))
 		app.get('/', (_req, res) => res.send(`<html><head></head><body><canvas></canvas></body></html>`))
-		this.server = app.listen(3333, () => console.log('Running express server for Puppeteer pages'))
+		this.server = app.listen(port, () => console.log('Running express server for Puppeteer pages'))
 	}
 
 	async start() {
@@ -119,7 +121,7 @@ export default class Puppenv {
 			msg = msg.text()
 			console.log('From page: ', msg)
 		})
-		await page.goto('http://localhost:3333')
+		await page.goto(`http://localhost:${port}`)
 
 		await page.addScriptTag({ content: docereConfigData.prepareDocument.toString()	 })
 		await page.addScriptTag({ content: docereConfigData.extractFacsimiles.toString() })
