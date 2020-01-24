@@ -36,13 +36,22 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	}
 
 	// Text data
-	const textData: Record<string, string[]> = {}
-	let extractedTextData: ExtractedTextData = new Map()
+	let textData: Record<string, string[]> = {}
+	let extractedTextData: Entity[] = []
 	try {
 		extractedTextData = extractTextData(doc, docereConfig)
-		for (const [key, data] of extractedTextData.entries()) {
-			textData[key] = Array.from(data.values()).map(d => d.value)
-		}
+		textData = extractedTextData.reduce((prev, curr) => {
+			if (prev.hasOwnProperty(curr.type)) {
+				prev[curr.type] = prev[curr.type].concat(curr.value)
+			} else {
+				prev[curr.type] = [curr.value]
+			}
+			// prev[curr.id] = curr.value
+			return prev
+		}, {} as Record<string, string[]>)
+		// textData[key] = data
+		// for (const [key, data] of extractedTextData.entries()) {
+		// }
 	} catch (err) {
 		console.log(`Document ${documentId}: Text data extraction error`)
 	}

@@ -102,6 +102,7 @@ export default class Puppenv {
 		try {
 			dcdImport = require(configDataPath)
 		} catch (err) {
+			console.log(err)
 			throw new Error(`[getConfigData] Config file not found at '${configDataPath}'`)
 		}
 
