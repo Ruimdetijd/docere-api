@@ -81,7 +81,7 @@ export default class Puppenv {
 		}
 
 		if (docereConfigData.config.hasOwnProperty('metadata')) docereConfigData.config.metadata.forEach(md => fieldKeys.add(md.id))
-		if (docereConfigData.config.hasOwnProperty('metadata')) docereConfigData.config.textData.forEach(td => fieldKeys.add(td.id))
+		if (docereConfigData.config.hasOwnProperty('textData')) docereConfigData.config.textData.forEach(td => fieldKeys.add(td.id))
 
 		fieldKeys
 			.forEach(key => {
