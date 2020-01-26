@@ -1,26 +1,50 @@
 import fetch from 'node-fetch'
 
-function check(valid: boolean) {
-	if (valid)	console.log('\x1b[32m%s\x1b[0m', 'Pass');
-	else		console.log('\x1b[31m%s\x1b[0m', 'Fail');
+/**
+
+# Running tests
+`$ npx ts-node test.ts` 
+
+*/
+
+const baseUrl = 'http://localhost:3000/'
+
+async function checkGet(
+	url: string,
+	test: (response: any) => boolean
+) {
+	const response = await fetch(url)
+	const json = await response.json()
+
+	if (test(json))
+		console.log('\x1b[32m%s\x1b[0m', 'Pass');
+	else
+		console.log('\x1b[31m%s\x1b[0m', 'Fail', JSON.stringify(json));
 }
 
 async function main() {
-	const response = await fetch('http://localhost:3000/projects')
-	const projects = await response.json()
-	check(projects.length > 0) 
+	checkGet(
+		`${baseUrl}projects`,
+		projects => projects.length > 0
+	) 
 
-	const response2 = await fetch('http://localhost:3000/projects/gheys/config')
-	const config = await response2.json()
-	check(config.hasOwnProperty('config'))
+	checkGet(
+		`${baseUrl}projects/gheys/config`,
+		config => config.hasOwnProperty('config')
+	)
 
-	const documentId = encodeURIComponent('nl-gngra/85/32/nl-gngra_85_32_0001')
-	const response3 = await fetch(`http://localhost:3000/projects/gheys/documents/${documentId}`)
-	const fields = await response3.json()
-	check(
-		fields.hasOwnProperty('facsimiles') &&
-		fields.hasOwnProperty('id') &&
-		fields.hasOwnProperty('text')
+	checkGet(
+		`${baseUrl}projects/gheys/documents/${encodeURIComponent('nl-htbhic/7048/62/NL-HtBHIC_7048_62_0170')}`,
+		fields => fields.hasOwnProperty('facsimiles') && fields.hasOwnProperty('id') && fields.hasOwnProperty('text')
+	)
+
+	checkGet(
+		`${baseUrl}projects/gheys/mapping`,
+		mapping =>
+			mapping.hasOwnProperty('mappings') && mapping.mappings.hasOwnProperty('properties') &&
+			mapping.mappings.properties.hasOwnProperty('id') &&
+			mapping.mappings.properties.id.hasOwnProperty('type') &&
+			mapping.mappings.properties.id.type === 'keyword'
 	)
 }
 
