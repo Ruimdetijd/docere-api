@@ -34,7 +34,7 @@ async function main() {
 	)
 
 	checkGet(
-		`${baseUrl}projects/gheys/documents/${encodeURIComponent('nl-htbhic/7048/62/NL-HtBHIC_7048_62_0170')}`,
+		`${baseUrl}projects/gheys/documents/${encodeURIComponent('RHC-BHIC/7048/62/NL-HtBHIC_7048_62_0170')}`,
 		fields => fields.hasOwnProperty('facsimiles') && fields.hasOwnProperty('id') && fields.hasOwnProperty('text')
 	)
 
