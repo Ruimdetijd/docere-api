@@ -5,8 +5,8 @@ export function getProjectsSourceDir() {
 	return path.resolve(process.cwd(), `node_modules/docere-projects/src`)
 }
 
-function getProjectBuildDir(projectId: string) {
-	return path.resolve(process.cwd(), `node_modules/docere-projects/build`, projectId)
+function getProjectDistDir(projectId: string) {
+	return path.resolve(process.cwd(), `node_modules/docere-projects/dist`, projectId)
 }
 
 export function getProjectSourcedDir(projectId: string) {
@@ -22,7 +22,7 @@ export function getXMLPath(projectId: string, documentId: string) {
 }
 
 export function getConfigDataPath(projectId: string) {
-	return path.resolve(getProjectBuildDir(projectId), 'index.js')
+	return path.resolve(getProjectDistDir(projectId), 'index.js')
 }
 
 export function getEntryIdFromFilePath(xmlFilePath: string, projectId: string) {

@@ -1,13 +1,13 @@
 declare global {
-	const extractFacsimiles: DocereConfigDataRaw['extractFacsimiles']
-	const extractMetadata: DocereConfigDataRaw['extractMetadata']
-	const extractTextData: DocereConfigDataRaw['extractTextData']
-	const prepareDocument: DocereConfigDataRaw['prepareDocument']
+	const DocereProjects: any
 }
 
-export async function prepareAndExtract(xml: string, documentId: string, docereConfig: DocereConfig): Promise<ElasticSearchDocument | { __error: string }> {
+export async function prepareAndExtract(xml: string, documentId: string, projectId: string): Promise<ElasticSearchDocument | { __error: string }> {
 	const domParser = new DOMParser()
 	let xmlRoot: XMLDocument
+
+	// TODO fix if configData not found
+	const docereConfigData: DocereConfigData = (await DocereProjects.default[projectId]()).default
 
 	try {
 		xmlRoot = domParser.parseFromString(xml, "application/xml")
@@ -30,7 +30,7 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	// console.log(prepareDocument.toString())
 	let doc: XMLDocument
 	try {
-		doc = await prepareDocument(xmlRoot, docereConfig, documentId)
+		doc = await docereConfigData.prepareDocument(xmlRoot, docereConfigData.config, documentId)
 	} catch (err) {
 		console.log(`Document ${documentId}: Preparation error`)
 	}
@@ -39,7 +39,7 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	let textData: Record<string, string[]> = {}
 	let extractedTextData: Entity[] = []
 	try {
-		extractedTextData = extractTextData(doc, docereConfig)
+		extractedTextData = docereConfigData.extractTextData(doc, docereConfigData.config)
 		textData = extractedTextData.reduce((prev, curr) => {
 			if (prev.hasOwnProperty(curr.type)) {
 				prev[curr.type] = prev[curr.type].concat(curr.value)
@@ -59,7 +59,7 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	// Metadata
 	let metadata: ExtractedMetadata = {}
 	try {
-		metadata = extractMetadata(doc, docereConfig, documentId)
+		metadata = docereConfigData.extractMetadata(doc, docereConfigData.config, documentId)
 	} catch (err) {
 		console.log(`Document ${documentId}: Metadata extraction error`)
 	}
@@ -67,18 +67,22 @@ export async function prepareAndExtract(xml: string, documentId: string, docereC
 	// Facsimiles
 	let facsimiles: ExtractedFacsimile[] = []
 	try {
-		facsimiles = extractFacsimiles(doc)
-		facsimiles = facsimiles.reduce((prev, curr) => prev.concat(curr.path), [])
+		facsimiles = docereConfigData.extractFacsimiles(doc, docereConfigData.config)
+
+		// For indexing, we only need the facsimile paths
+		facsimiles = facsimiles.reduce((prev, curr) => prev.concat(curr.versions.map(v => v.path)), [])
 	} catch (err) {
 		console.log(`Document ${documentId}: Facsimile extraction error`)
 	}
-	
+
+	const text = doc.documentElement.textContent
 
 	return {
-		// id: fileName.slice(-4) === '.xml' ? fileName.slice(0, -4) : fileName,
 		id: documentId,
-		text: doc.documentElement.textContent,
-		// For indexing, we only need the facsimile paths
+		text,
+		text_suggest: {
+			input: text.split(' '),
+		},
 		facsimiles,
 		...metadata,
 		...textData

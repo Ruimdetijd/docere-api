@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "postinstall": "./postinstall.sh",
+    "test": "npx ts-node test.ts",
     "watch": "tsc -w"
   },
   "dependencies": {

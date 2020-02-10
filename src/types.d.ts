@@ -7,11 +7,13 @@ interface ElasticSearchDocument {
 	facsimiles: ExtractedFacsimile[]
 	[key: string]: any
 }
-type MappingProperties = Record<string, { type: EsDataType }>
+type MappingProperties = Record<string, {
+	type: EsDataType,
+	[key: string]: string | number | boolean
+}>
+
 interface Mapping {
 	mappings: {
-		// doc: {
-			properties: MappingProperties
-		// }
+		properties: MappingProperties
 	}
 }

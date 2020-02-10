@@ -15,7 +15,10 @@ export default class Puppenv {
 	constructor() {
 		const app = express()
 		app.disable('x-powered-by')
-		app.use(express.static(getProjectsSourceDir().replace(/^\/app/, '')))
+		app.use(express.static(getProjectsSourceDir().replace(/^\/app/, '').replace(/src$/, '')))
+		app.use(express.static(process.cwd()))
+
+		// app.use(express.static(path.resolve(process.cwd(), `node_modules/docere-projects/src`)))
 		app.get('/', (_req, res) => res.send(`<html><head></head><body><canvas></canvas></body></html>`))
 		this.server = app.listen(port, () => console.log('Running express server for Puppeteer pages'))
 	}
@@ -37,16 +40,13 @@ export default class Puppenv {
 	}
 
 	async getDocumentFields(xml: string, projectId: string, documentId?: string): Promise<ElasticSearchDocument> {
-		const docereConfigData = await this.getConfigData(projectId)
-		if (docereConfigData == null) throw new Error(`No config found for project '${projectId}'`)
-
-		const page = await this.getPage(projectId, docereConfigData)
+		const page = await this.getPage(projectId)
 
 		const result = await page.evaluate(
 			prepareAndExtract,
 			xml,
 			documentId,
-			docereConfigData.config as any
+			projectId,
 		)
 
 		if (result.hasOwnProperty('__error')) throw new Error(result.__error)
@@ -88,6 +88,14 @@ export default class Puppenv {
 				properties[key] = { type: getType(key, docereConfigData.config) }
 			})
 
+		properties.text_suggest = {
+			type: EsDataType.Completion,
+			analyzer: "simple",
+			preserve_separators: true,
+			preserve_position_increments: true,
+			max_input_length: 50,
+		}
+
 		return {
 			mappings: { properties }
 		}
@@ -102,6 +110,7 @@ export default class Puppenv {
 
 		let dcdImport: { default: DocereConfigData }
 		try {
+			// dcdImport = await import(configDataPath)
 			dcdImport = require(configDataPath)
 		} catch (err) {
 			console.log(err)
@@ -113,7 +122,7 @@ export default class Puppenv {
 		return dcdImport.default
 	}
 
-	private async getPage(projectId: string, docereConfigData: DocereConfigData) {
+	private async getPage(projectId: string) {
 		if (this.pages.has(projectId)) return this.pages.get(projectId)
 
 		const page = await this.browser.newPage()
@@ -123,10 +132,7 @@ export default class Puppenv {
 		})
 		await page.goto(`http://localhost:${port}`)
 
-		await page.addScriptTag({ content: docereConfigData.prepareDocument.toString()	 })
-		await page.addScriptTag({ content: docereConfigData.extractFacsimiles.toString() })
-		await page.addScriptTag({ content: docereConfigData.extractMetadata.toString()	 })
-		await page.addScriptTag({ content: docereConfigData.extractTextData.toString()	 })
+		await page.addScriptTag({ path: './node_modules/docere-projects/bundle/index.js' })
 
 		this.pages.set(projectId, page)	
 		console.log(`Return ${projectId} page`)

@@ -109,54 +109,6 @@ async function main() {
 	app.get('/api/dts/collections', (req, res) => {
 		console.log(req.query)
 		const projectIds = listProjects()
-		// if (req.query.hasOwnProperty('id')) {
-
-		// 	{
-		// 		"@context": {
-		// 			"@vocab": "https://www.w3.org/ns/hydra/core#",
-		// 			"ns2": "http://purl.org/dc/elements/1.1/",
-		// 			"cts": "http://chs.harvard.edu/xmlns/cts/",
-		// 			"dts": "https://w3id.org/dts/api#",
-		// 			"ns1": "http://www.w3.org/2004/02/skos/core#"
-		// 		},
-		// 		"@type": "Collection",
-		// 		"title": "Ajax",
-		// 		"@id": "urn:cts:greekLit:tlg0011.tlg003",
-		// 		"totalItems": 1,
-		// 		"member": [
-		// 			{
-		// 				"dts:references": "/api/dts/navigation?id=urn%3Acts%3AgreekLit%3Atlg0011.tlg003.alpheios-text-grc1",
-		// 				"@type": "Resource",
-		// 				"title": "Alpheios Enhanced Ajax",
-		// 				"@id": "urn:cts:greekLit:tlg0011.tlg003.alpheios-text-grc1",
-		// 				"dts:citeDepth": 1,
-		// 				"totalItems": 0,
-		// 				"dts:passage": "/api/dts/document?id=urn%3Acts%3AgreekLit%3Atlg0011.tlg003.alpheios-text-grc1",
-		// 				"dts:extensions": {
-		// 					"ns2:language": "grc",
-		// 					"cts:description": [
-		// 						{"@value": "TEI with Syntax Diagrams", "@language": "eng"}
-		// 					],
-		// 					"cts:label": [
-		// 						{"@value": "Alpheios Enhanced Ajax", "@language": "eng"}
-		// 					],
-		// 					"ns1:prefLabel": [
-		// 						{"@value": "Alpheios Enhanced Ajax", "@language": "eng"}
-		// 					]
-		// 				}
-		// 			}
-		// 		],
-		// 		"dts:extensions": {
-		// 			"ns2:language": "grc",
-		// 			"cts:title": [
-		// 				{"@value": "Ajax", "@language": "eng"}
-		// 			],
-		// 			"ns1:prefLabel": [
-		// 				{"@value": "Ajax", "@language": "eng"}
-		// 			]
-		// 		}
-		// 	}
-		// }
 
 		res.json({
 			"@context": {
