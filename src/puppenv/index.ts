@@ -85,7 +85,8 @@ export default class Puppenv {
 
 		fieldKeys
 			.forEach(key => {
-				properties[key] = { type: getType(key, docereConfigData.config) }
+				const type = getType(key, docereConfigData.config)
+				if (type != null) properties[key] = { type }
 			})
 
 		properties.text_suggest = {

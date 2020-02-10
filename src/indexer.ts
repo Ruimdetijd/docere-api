@@ -20,7 +20,7 @@ async function handleProject(projectId: string) {
 	try {
 		await esClient.indices.delete({ index: projectId })	
 	} catch (err) {
-		console.log('deleteIndex', err)	
+		// console.log('deleteIndex', err)	
 	}
 
 	// Create a fresh index
@@ -39,7 +39,7 @@ async function handleProject(projectId: string) {
 		const entryId = getEntryIdFromFilePath(filePath, projectId)
 		const esDocument = await puppenv.getDocumentFields(xml, projectId, entryId)
 		if (esDocument.hasOwnProperty('__error')) return esDocument.__error
-		
+
 		try {
 			await esClient.index({
 				index: projectId,

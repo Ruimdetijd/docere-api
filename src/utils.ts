@@ -47,6 +47,8 @@ export function getType(key: string, config: DocereConfig): EsDataType {
 
 	if (key === 'text') type = EsDataType.Text
 
+	if (type === EsDataType.Null) return null
+
 	return type
 }
 

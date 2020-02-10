@@ -106,8 +106,7 @@ async function main() {
 		})
 	})
 
-	app.get('/api/dts/collections', (req, res) => {
-		console.log(req.query)
+	app.get('/api/dts/collections', (_req, res) => {
 		const projectIds = listProjects()
 
 		res.json({
