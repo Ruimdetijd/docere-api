@@ -34,6 +34,7 @@ async function handleProject(projectId: string) {
 	}
 
 	// Insert every XML file one by one
+	let index = 0
 	for (const filePath of filePaths) {
 		const xml = readFileContents(filePath)
 		const entryId = getEntryIdFromFilePath(filePath, projectId)
@@ -45,7 +46,7 @@ async function handleProject(projectId: string) {
 				index: projectId,
 				body: esDocument,
 			})
-			console.log(`Indexed '${entryId}' from project '${projectId}'`)
+			process.stdout.write(`Indexed '${entryId}' from project '${projectId}'\t\t(${++index} of ${filePaths.length})\n`)
 		} catch (err) {
 			console.log(err)	
 		}
@@ -65,6 +66,7 @@ async function main() {
 
 	await puppenv.close()
 	esClient.close()
+	console.log('')
 }
 
 main()
