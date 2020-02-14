@@ -46,6 +46,7 @@ export function getType(key: string, config: DocereConfig): EsDataType {
 	if (tdConfig != null && tdConfig.datatype != null) type = tdConfig.datatype
 
 	if (key === 'text') type = EsDataType.Text
+	if (type === EsDataType.Hierarchy) type = EsDataType.Keyword
 
 	if (type === EsDataType.Null) return null
 
