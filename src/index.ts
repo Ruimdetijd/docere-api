@@ -75,6 +75,10 @@ async function main() {
 		res.json(documentFields)
 	})
 
+	/*
+	 * Usage example:
+	 * $ curl -X POST localhost:3000/projects/<projectId>/documents/<docId>/fields -H content-type:text/xml -d @/path/to/file.xml
+	 */
 	app.post('/projects/:projectId/documents/:documentId/fields', async (req, res) => {
 		if (req.headers['content-type'] !== 'application/xml' && req.headers['content-type'] !== 'text/xml') {
 			return res.status(415).json({ error: 'Missing the HTTP Content-type header for XML' })
