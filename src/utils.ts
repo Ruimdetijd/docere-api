@@ -68,10 +68,11 @@ function isXmlFile(dirent: fs.Dirent) { return dirent.isFile() && path.extname(d
  * An entry can exist of multiple XML files, but this
  * recursive function returns only the "main" XML files.
  */
-function getMainXmlFilePathsFromDir(dir: string) {
+function getMainXmlFilePathsFromDir(dir: string, maxPerDir: number = null) {
 	const files: string[] = []
 	const dirents = fs.readdirSync(dir, { withFileTypes: true })
-	const xmlFiles = dirents.filter(isXmlFile)
+	let xmlFiles = dirents.filter(isXmlFile)
+	if (maxPerDir != null) xmlFiles = xmlFiles.slice(0, maxPerDir)
 
 	if (xmlFiles.length) {
 		xmlFiles.forEach(f => files.push(`${dir}/${f.name}`))
@@ -79,7 +80,7 @@ function getMainXmlFilePathsFromDir(dir: string) {
 		dirents
 			.filter(x => x.isDirectory() || x.isSymbolicLink())
 			.forEach(x => {
-				getMainXmlFilePathsFromDir(`${dir}/${x.name}`)
+				getMainXmlFilePathsFromDir(`${dir}/${x.name}`, maxPerDir)
 					.forEach(f => files.push(f))
 			})
 	}
@@ -87,7 +88,7 @@ function getMainXmlFilePathsFromDir(dir: string) {
 	return files
 }
 
-export async function getXmlFiles(projectId: string) {
+export async function getXmlFiles(projectId: string, maxPerDir: number = null) {
 	const baseDir = getXmlDir(projectId)
-	return getMainXmlFilePathsFromDir(baseDir)
+	return getMainXmlFilePathsFromDir(baseDir, maxPerDir)
 }
