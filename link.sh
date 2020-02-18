@@ -7,9 +7,3 @@ ln -s ../../docere docere
 
 rm -rf docere-projects
 ln -s ../../docere-projects docere-projects
-
-# rm -rf huc-faceted-search
-# ln -s ../../huc-faceted-search huc-faceted-search
-
-# rm -rf docere-text-view
-# ln -s ../../docere-text-view docere-text-view
