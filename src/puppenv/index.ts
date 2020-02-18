@@ -1,8 +1,12 @@
 import puppeteer from 'puppeteer'
 import express from 'express'
 import { Server } from 'http'
-import { getType, getConfigDataPath, getProjectsSourceDir, readFileContents, getEntryIdFromFilePath } from '../utils'
+import { getType, getProjectsSourceDir, readFileContents, getEntryIdFromFilePath } from '../utils'
 import { prepareAndExtract } from './evaluate'
+
+// `import projects from 'docere-projects'` does not work because setting type: "module" in package.json
+// of docere-projects makes `npm run bundle` fail with ERR_REQUIRE_ESM
+const projects = require('esm')(module)('docere-projects').default
 
 const port = 3334
 
@@ -42,12 +46,17 @@ export default class Puppenv {
 	async getDocumentFields(xml: string, projectId: string, documentId?: string): Promise<ElasticSearchDocument> {
 		const page = await this.getPage(projectId)
 
-		const result = await page.evaluate(
-			prepareAndExtract,
-			xml,
-			documentId,
-			projectId,
-		)
+		let result: any
+		try {
+			result = await page.evaluate(
+				prepareAndExtract,
+				xml,
+				documentId,
+				projectId,
+			)
+		} catch (err) {
+			console.log('er', err)	
+		}
 
 		if (result.hasOwnProperty('__error')) throw new Error(result.__error)
 
@@ -106,21 +115,18 @@ export default class Puppenv {
 		if (this.configDatas.has(projectId)) {
 			return this.configDatas.get(projectId)
 		}
-
-		const configDataPath = getConfigDataPath(projectId)
-
-		let dcdImport: { default: DocereConfigData }
+		let configData: DocereConfigData
 		try {
-			// dcdImport = await import(configDataPath)
-			dcdImport = require(configDataPath)
+			const configDataImport = await projects[projectId]
+			configData = (await configDataImport()).default
 		} catch (err) {
 			console.log(err)
-			throw new Error(`[getConfigData] Config file not found at '${configDataPath}'`)
+			throw new Error(`[getConfigData] Config data not found for '${projectId}'`)
 		}
 
-		this.configDatas.set(projectId, dcdImport.default)
+		this.configDatas.set(projectId, configData)
 		console.log(`Return ${projectId} config`)
-		return dcdImport.default
+		return configData
 	}
 
 	private async getPage(projectId: string) {
