@@ -1,7 +1,7 @@
 version: "3.6"
 
 services:
-  docere_api:
+  api:
     build:
       context: .
     command: ["npx", "nodemon", "build"]
