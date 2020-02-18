@@ -12,7 +12,7 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 	try {
 		xmlRoot = domParser.parseFromString(xml, "application/xml")
 	} catch (err) {
-		console.log(`Document ${documentId}: XML parser error`)
+		return { __error: `Document ${documentId}: XML parser error\n${JSON.stringify(err)}` }
 	}
 
 	if (xmlRoot.querySelector('parsererror')) {
@@ -32,7 +32,7 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 	try {
 		doc = await docereConfigData.prepareDocument(xmlRoot, docereConfigData.config, documentId)
 	} catch (err) {
-		console.log(`Document ${documentId}: Preparation error`)
+		return { __error: `Document ${documentId}: Preparation error\n${JSON.stringify(err)}` }
 	}
 
 	// Text data
@@ -53,7 +53,7 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 		// for (const [key, data] of extractedTextData.entries()) {
 		// }
 	} catch (err) {
-		console.log(`Document ${documentId}: Text data extraction error`)
+		return { __error: `Document ${documentId}: Text data extraction error\n${JSON.stringify(err)}` }
 	}
 
 	// Metadata
@@ -61,7 +61,7 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 	try {
 		metadata = docereConfigData.extractMetadata(doc, docereConfigData.config, documentId)
 	} catch (err) {
-		console.log(`Document ${documentId}: Metadata extraction error`)
+		return { __error: `Document ${documentId}: Metadata extraction error\n${JSON.stringify(err)}` }
 	}
 
 	// Facsimiles
@@ -72,7 +72,7 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 		// For indexing, we only need the facsimile paths
 		facsimiles = facsimiles.reduce((prev, curr) => prev.concat(curr.versions.map(v => v.path)), [])
 	} catch (err) {
-		console.log(`Document ${documentId}: Facsimile extraction error`)
+		return { __error: `Document ${documentId}: Facsimile extraction error\n${JSON.stringify(err)}` }
 	}
 
 	const text = doc.documentElement.textContent
