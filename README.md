@@ -14,3 +14,9 @@ $ docker-compose -p docere up --build -d
 ```
 $ npx ts-node test.ts
 ```
+
+## Run Swagger
+```
+$ docker run -p 8080:8080 swaggerapi/swagger-ui
+```
+And point Swagger to http://localhost:4000/swagger.yml
