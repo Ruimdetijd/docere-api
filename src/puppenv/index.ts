@@ -1,7 +1,8 @@
+import * as fs from 'fs'
 import puppeteer from 'puppeteer'
 import express from 'express'
 import { Server } from 'http'
-import { getType, getProjectsSourceDir, readFileContents, getEntryIdFromFilePath } from '../utils'
+import { getType, getProjectsSourceDir, readFileContents, getEntryIdFromFilePath, getXMLPath, isError } from '../utils'
 import { prepareAndExtract } from './evaluate'
 
 // `import projects from 'docere-projects'` does not work because setting type: "module" in package.json
@@ -43,10 +44,22 @@ export default class Puppenv {
 		this.server.close()
 	}
 
-	async getDocumentFields(xml: string, projectId: string, documentId?: string): Promise<ElasticSearchDocument> {
+	async prepareAndExtractFromFile(projectId: string, documentId: string) {
+		const filePath = getXMLPath(projectId, documentId)
+
+		let contents
+		try {
+			contents = await fs.readFileSync(filePath, 'utf8')
+		} catch (err) {
+			return { __error: `File '${documentId}.xml' for project '${projectId}' not found` }
+		}
+
+		return this.prepareAndExtract(contents, projectId, documentId)
+	}
+	async prepareAndExtract(xml: string, projectId: string, documentId?: string): Promise<PrepareAndExtractOutput | DocereApiError> {
 		const page = await this.getPage(projectId)
 
-		let result: any
+		let result: PrepareAndExtractOutput | DocereApiError
 		try {
 			result = await page.evaluate(
 				prepareAndExtract,
@@ -55,18 +68,17 @@ export default class Puppenv {
 				projectId,
 			)
 		} catch (err) {
-			console.log('er', err)	
+			console.log(err)
+			result = { __error: `Prepare and extract failed for '${documentId}' in '${projectId}'\n${JSON.stringify(err)}` }
 		}
 
-		if (result.hasOwnProperty('__error')) throw new Error(result.__error)
-
-		return result as ElasticSearchDocument
+		return result
 	}
 
-	async getMapping(projectId: string, filePaths: string[]): Promise<Mapping> {
+	async getMapping(projectId: string, filePaths: string[]): Promise<Mapping | DocereApiError> {
 		const properties: MappingProperties = {}
 		const docereConfigData = await this.getConfigData(projectId)
-		if (docereConfigData == null) throw new Error(`No config found for project '${projectId}'`)
+		if (isError(docereConfigData)) return docereConfigData
 
 		const selectedFileNames = [
 			filePaths[0],
@@ -85,7 +97,8 @@ export default class Puppenv {
 		const fieldKeys = new Set<string>()
 		for (const [i, xml] of xmlContents.entries()) {
 			const entryId = getEntryIdFromFilePath(selectedFileNames[i], projectId)
-			const fields = await this.getDocumentFields(xml, projectId, entryId)
+			const fields = await this.prepareAndExtract(xml, projectId, entryId)
+			if (isError(fields)) return fields
 			Object.keys(fields).forEach(fieldKey => fieldKeys.add(fieldKey))
 		}
 
@@ -111,21 +124,25 @@ export default class Puppenv {
 		}
 	}
 
-	async getConfigData(projectId: string) {
+	async getConfigData(projectId: string): Promise<DocereConfigData | DocereApiError> {
 		if (this.configDatas.has(projectId)) {
 			return this.configDatas.get(projectId)
 		}
-		let configData: DocereConfigData
+
+		const error =  { code: 404, __error: `Config data not found. Does project '${projectId}' exist?` }
+		let configData: DocereConfigData | DocereApiError
 		try {
 			const configDataImport = await projects[projectId]
-			configData = (await configDataImport()).default
+			configData = configDataImport == null ?
+				error :
+				(await configDataImport()).default
 		} catch (err) {
-			console.log(err)
-			throw new Error(`[getConfigData] Config data not found for '${projectId}'`)
+			configData = error
 		}
 
-		this.configDatas.set(projectId, configData)
-		console.log(`Return ${projectId} config`)
+		if (!isError(configData)) this.configDatas.set(projectId, configData)
+		else console.log(`Return ${projectId} config`)
+
 		return configData
 	}
 

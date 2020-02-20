@@ -2,7 +2,7 @@ declare global {
 	const DocereProjects: any
 }
 
-export async function prepareAndExtract(xml: string, documentId: string, projectId: string): Promise<ElasticSearchDocument | { __error: string }> {
+export async function prepareAndExtract(xml: string, documentId: string, projectId: string): Promise<PrepareAndExtractOutput | { __error: string }> {
 	const domParser = new DOMParser()
 	let xmlRoot: XMLDocument
 
@@ -35,25 +35,13 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 		return { __error: `Document ${documentId}: Preparation error\n${JSON.stringify(err)}` }
 	}
 
-	// Text data
-	let textData: Record<string, string[]> = {}
-	let extractedTextData: Entity[] = []
+	// Entities
+	// let entities: Record<string, string[]> = {}
+	let entities: Entity[] = []
 	try {
-		extractedTextData = docereConfigData.extractTextData(doc, docereConfigData.config)
-		textData = extractedTextData.reduce((prev, curr) => {
-			if (prev.hasOwnProperty(curr.type)) {
-				prev[curr.type] = prev[curr.type].concat(curr.value)
-			} else {
-				prev[curr.type] = [curr.value]
-			}
-			// prev[curr.id] = curr.value
-			return prev
-		}, {} as Record<string, string[]>)
-		// textData[key] = data
-		// for (const [key, data] of extractedTextData.entries()) {
-		// }
+		entities = docereConfigData.extractEntities(doc, docereConfigData.config)
 	} catch (err) {
-		return { __error: `Document ${documentId}: Text data extraction error\n${JSON.stringify(err)}` }
+		return { __error: `Document ${documentId}: Entity extraction error\n${JSON.stringify(err)}` }
 	}
 
 	// Metadata
@@ -64,27 +52,43 @@ export async function prepareAndExtract(xml: string, documentId: string, project
 		return { __error: `Document ${documentId}: Metadata extraction error\n${JSON.stringify(err)}` }
 	}
 
+	// Notes
+	let notes: Note[] = []
+	try {
+		notes = docereConfigData.extractNotes(doc, docereConfigData.config)
+	} catch (err) {
+		return { __error: `Document ${documentId}: Note extraction error\n${JSON.stringify(err)}` }
+	}
+
 	// Facsimiles
 	let facsimiles: ExtractedFacsimile[] = []
 	try {
 		facsimiles = docereConfigData.extractFacsimiles(doc, docereConfigData.config)
 
 		// For indexing, we only need the facsimile paths
-		facsimiles = facsimiles.reduce((prev, curr) => prev.concat(curr.versions.map(v => v.path)), [])
+		// facsimiles = facsimiles.reduce((prev, curr) => prev.concat(curr.versions.map(v => v.path)), [])
 	} catch (err) {
 		return { __error: `Document ${documentId}: Facsimile extraction error\n${JSON.stringify(err)}` }
 	}
 
-	const text = doc.documentElement.textContent
+
+	// Layers
+	let layers: ExtractedLayer[] = []
+	try {
+		layers = docereConfigData.extractLayers(doc, docereConfigData.config)
+	} catch (err) {
+		return { __error: `Document ${documentId}: Layer extraction error\n${JSON.stringify(err)}` }
+	}
+
+	const text = docereConfigData.extractText(doc, docereConfigData.config)
 
 	return {
 		id: documentId,
 		text,
-		text_suggest: {
-			input: text.split(' '),
-		},
 		facsimiles,
-		...metadata,
-		...textData
+		metadata,
+		notes,
+		entities,
+		layers,
 	}
 }

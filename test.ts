@@ -34,8 +34,25 @@ async function main() {
 	)
 
 	checkGet(
-		`${baseUrl}projects/gheys/documents/${encodeURIComponent('RHC-BHIC/7048/62/NL-HtBHIC_7048_62_0170')}`,
-		fields => fields.hasOwnProperty('facsimiles') && fields.hasOwnProperty('id') && fields.hasOwnProperty('text')
+		`${baseUrl}projects/gheys/documents/${encodeURIComponent('NHA_1617/1780/NL-HlmNHA_1617_1780_0001')}`,
+		fields =>
+			fields.hasOwnProperty('facsimiles') &&
+			fields.hasOwnProperty('id') &&
+			fields.hasOwnProperty('text') &&
+			fields.hasOwnProperty('metadata') &&
+			fields.hasOwnProperty('entities') &&
+			!fields.hasOwnProperty('text_suggest')
+	)
+
+	checkGet(
+		`${baseUrl}projects/gheys/documents/${encodeURIComponent('NHA_1617/1780/NL-HlmNHA_1617_1780_0001')}/fields`,
+		fields =>
+			fields.hasOwnProperty('facsimiles') &&
+			fields.hasOwnProperty('id') &&
+			fields.hasOwnProperty('text') &&
+			fields.hasOwnProperty('text_suggest') &&
+			!fields.hasOwnProperty('metadata') &&
+			!fields.hasOwnProperty('entities')
 	)
 
 	checkGet(

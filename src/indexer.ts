@@ -1,6 +1,6 @@
 import * as es from '@elastic/elasticsearch'
 import Puppenv from './puppenv'
-import { listProjects, getXmlFiles, readFileContents, getEntryIdFromFilePath } from './utils'
+import { listProjects, getXmlFiles, readFileContents, getEntryIdFromFilePath, getElasticSearchDocument, isError } from './utils'
 
 const puppenv = new Puppenv()
 const esClient = new es.Client({ node: 'http://localhost:9200' })
@@ -9,12 +9,8 @@ async function handleProject(projectId: string) {
 	const filePaths = await getXmlFiles(projectId)
 
 	// Get the ElasticSearch mapping for the project
-	let mapping: Mapping
-	try {
-		mapping = await puppenv.getMapping(projectId, filePaths)
-	} catch (err) {
-		return console.log(err.message)
-	}
+	const mapping = await puppenv.getMapping(projectId, filePaths)
+	if (isError(mapping)) return mapping
 
 	// Delete the previous index
 	try {
@@ -38,8 +34,9 @@ async function handleProject(projectId: string) {
 	for (const filePath of filePaths) {
 		const xml = readFileContents(filePath)
 		const entryId = getEntryIdFromFilePath(filePath, projectId)
-		const esDocument = await puppenv.getDocumentFields(xml, projectId, entryId)
-		if (esDocument.hasOwnProperty('__error')) return esDocument.__error
+		const x = await puppenv.prepareAndExtract(xml, projectId, entryId)
+		const esDocument = getElasticSearchDocument(x)
+		if (isError(esDocument)) return esDocument.__error
 
 		try {
 			await esClient.index({

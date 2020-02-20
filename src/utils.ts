@@ -1,5 +1,6 @@
 import * as path from 'path'
 import * as fs from 'fs'
+import { Response as ExpressResponse } from 'express'
 
 export function getProjectsSourceDir() {
 	return path.resolve(process.cwd(), `node_modules/docere-projects/src`)
@@ -84,3 +85,62 @@ export async function getXmlFiles(projectId: string, maxPerDir: number = null) {
 	const baseDir = getXmlDir(projectId)
 	return getMainXmlFilePathsFromDir(baseDir, maxPerDir)
 }
+
+export function isError(payload: any | DocereApiError): payload is DocereApiError {
+	return payload.hasOwnProperty('__error')
+}
+
+
+export function getElasticSearchDocument(input: PrepareAndExtractOutput | DocereApiError): ElasticSearchDocument | DocereApiError {
+	if (isError(input)) return input
+
+	const entities = input.entities.reduce((prev, curr) => {
+		prev[curr.type] = (prev.hasOwnProperty(curr.type)) ?
+			prev[curr.type].concat(curr.value) :
+			[curr.value]
+
+		return prev
+	}, {} as Record<string, string[]>)
+
+	const facsimiles: string[] = input.facsimiles.reduce((prev, curr) => prev.concat(curr.versions.map(v => v.path)), [])
+
+	return {
+		id: input.id,
+		facsimiles,
+		text: input.text,
+		text_suggest: {
+			input: input.text.split(' '),
+		},
+		...entities,
+		...input.metadata
+	}
+}
+
+export function send(payload: any | DocereApiError, expressResponse: ExpressResponse) {
+	if (isError(payload)) {
+		const code = payload.hasOwnProperty('code') ? payload.code : 400
+		expressResponse.status(code).send(payload.__error)
+		return
+	}
+
+	expressResponse.json(payload)
+}
+// export async function getDocumentFields(projectId: string, documentId: string) {
+// 	const filePath = getXMLPath(projectId, documentId)
+
+// 	let contents
+// 	try {
+// 		contents = await fs.readFileSync(filePath, 'utf8')
+// 	} catch (err) {
+// 		return res.status(404).json({ __error: `File '${req.params.documentId}.xml' for project '${req.params.projectId}' not found`})	
+// 	}
+
+// 	let documentFields: ElasticSearchDocument
+// 	try {
+// 		documentFields = await puppenv.getDocumentFields(contents, req.params.projectId, req.params.documentId)
+// 	} catch (err) {
+// 		return { __error: err.message }
+// 	}
+
+// 	return documentFields
+// }
