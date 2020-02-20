@@ -35,7 +35,7 @@ export function getType(key: string, config: DocereConfig): EsDataType {
 	const mdConfig = config.metadata.find(md => md.id === key)
 	if (mdConfig != null && mdConfig.datatype != null) type = mdConfig.datatype
 
-	const tdConfig = config.textData.find(md => md.id === key)
+	const tdConfig = config.entities.find(md => md.id === key)
 	if (tdConfig != null && tdConfig.datatype != null) type = tdConfig.datatype
 
 	if (key === 'text') type = EsDataType.Text
